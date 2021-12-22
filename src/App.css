@@ -1,0 +1,14 @@
+body{
+  background-image: url("./assets/background.jpg");
+  background-color: #111;
+  background-position:center center;
+  background-repeat:no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+}
+.logo {
+  background: -webkit-linear-gradient(orange, red);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
