@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from "react-redux";
-// import { useParams } from 'react-router-dom';
-// import axios from 'axios';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 toast.configure();
 
-const Debt = ({ members, planId, payments, getMemberName, getCurrenyINRformat }) => {
+const Debt = ({ members, planId, payments, getMemberName, getCurrenyINRformat, getPayments }) => {
   // auth state from redux store
   const authState = useSelector((state) => state);
 
@@ -29,7 +28,7 @@ const Debt = ({ members, planId, payments, getMemberName, getCurrenyINRformat })
       let stack = [sourceIndex];
       let path = [];
       let isCycle = false;
-      console.log("start", sourceIndex)
+      // console.log("start", sourceIndex)
 
       while (stack.length > 0) {
         // console.log(stack, path);
@@ -42,6 +41,7 @@ const Debt = ({ members, planId, payments, getMemberName, getCurrenyINRformat })
         let p = stack[stack.length - 1];
         if (explored[p]) {
           stack.pop();
+          continue;
         }
         path.push(p);
         // console.log(stack, path, p)
@@ -72,6 +72,11 @@ const Debt = ({ members, planId, payments, getMemberName, getCurrenyINRformat })
           if (value < minval) { minval = value; }
         }
         // console.log("deduct min value", minval);
+        // if(minval===0) {
+        //   for (let z = 0; z<arr.length; z++) {
+        //       console.log(arr[z][0] + " " + arr[z][1] + " " + arr[z][2] + " " + arr[z][3] + " " + arr[z][4]);
+        //   }
+        // }
         for (let i = 0; i < pathLength; i++) {
           arr[path[i]][path[(i + 1) % pathLength]] -= minval;
         }
@@ -104,11 +109,47 @@ const Debt = ({ members, planId, payments, getMemberName, getCurrenyINRformat })
 
     debtArray = await removeCylclesDFS(debtArray, 0);
     setDebts(debtArray);
-    console.log(debtArray);
+    // console.log(debtArray);
   }
 
   const getSum = (total, num) => {
     return total + num;
+  }
+
+  var config = {
+    method: "post",
+    url: process.env.REACT_APP_SERVER_URL + '/plans/' + planId + "/payments/",
+    headers: {
+      'Content-Type': 'application/json',
+      'access-token': authState.accessToken
+    }
+  };
+
+  const handleSubmit = (memberId, member2Id) => {
+    config.data = {
+      title: "Amount Settlement",
+      note: getMemberName(memberId) 
+      + " paid " + getCurrenyINRformat(debts[memberIdToIndex[memberId]][memberIdToIndex[member2Id]])
+      + " to " + getMemberName(member2Id),
+      paidBy: [{ memberId: memberId, amount: debts[memberIdToIndex[memberId]][memberIdToIndex[member2Id]] }],
+      splitAmong: [ member2Id ],
+      settlement: true
+    };
+
+    axios(config).then(response => {
+      if (response.data) {
+        if (response.data.error) {
+          toast.error(response.data.error.message, { autoClose: 5000 });
+          console.log(response.data.error)
+        } else if (response.data.success) {
+          toast.success(response.data.success.message, { autoClose: 5000 });
+          getPayments();
+        }
+      }
+    })
+    .catch(function (err) {
+      console.log(err);
+    });
   }
 
   useEffect(() => {
@@ -126,30 +167,31 @@ const Debt = ({ members, planId, payments, getMemberName, getCurrenyINRformat })
                 <div className='col-12 col-md-6'>
                   {
                     members.filter(member => (  // get only those members who are being owed money
-                        debts[memberIdToIndex[member.id]].reduce(getSum)!==0
-                      )
+                      debts[memberIdToIndex[member.id]].reduce(getSum) !== 0
+                    )
                     ).map(member => (
-                        <div key={member.id}>
-                          {console.log(member.id)}
-                          <div className="card my-3">
-                            <div className="card-header">
-                              <h4>{member.name}</h4>
-                            </div>
-                            <ul className="list-group list-group-flush">
-                              {
-                                members.filter(member2 => (  // get only those members who owe money
-                                  debts[memberIdToIndex[member.id]][memberIdToIndex[member2.id]]!==0
-                                )
-                              ).map(member2 => (
-                                  // (debts[memberIdToIndex[member.id]][memberIdToIndex[member2.id]]) ? (
-                                    <li className="list-group-item" key={member2.id}><i className="bi bi-arrow-right me-2"></i>owes <em>{getCurrenyINRformat(debts[memberIdToIndex[member.id]][memberIdToIndex[member2.id]])}</em> to <strong>{member2.name}</strong></li>
-                                  // ) : (<></>)
-                                ))
-                              }
-
-                            </ul>
+                      <div key={member.id}>
+                        {console.log(member.id)}
+                        <div className="card my-3">
+                          <div className="card-header">
+                            <h4>{member.name}</h4>
                           </div>
+                          <ul className="list-group list-group-flush">
+                            {
+                              members.filter(member2 => (  // get only those members who owe money
+                                debts[memberIdToIndex[member.id]][memberIdToIndex[member2.id]] !== 0
+                              )
+                              ).map(member2 => (
+                                <li className="list-group-item d-flex" key={member2.id}>
+                                  <i className="bi bi-arrow-right me-2"></i>
+                                  <div>owes <em>{getCurrenyINRformat(debts[memberIdToIndex[member.id]][memberIdToIndex[member2.id]])}</em> to <strong>{member2.name}</strong></div>
+                                  <button className='btn btn-secondary ms-auto rounded-pill' onClick={() => { handleSubmit(member.id, member2.id) }}>Settle</button>
+                                </li>
+                              ))
+                            }
+                          </ul>
                         </div>
+                      </div>
                     ))
                   }
                 </div>

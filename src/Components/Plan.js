@@ -118,7 +118,7 @@ const Plan = ({ history }) => {
                   <Payments members={plan.members} planId={planId} payments={payments} getPayments={getPayments} deletePayment={deletePayment} getMemberName={getMemberName} getCurrenyINRformat={getCurrenyINRformat}/>
                 </div>
                 <div className="tab-pane fade" id="nav-debt" role="tabpanel">
-                  <Debt members={plan.members} planId={planId} payments={payments} getMemberName={getMemberName} getCurrenyINRformat={getCurrenyINRformat}/>
+                  <Debt members={plan.members} planId={planId} payments={payments} getMemberName={getMemberName} getCurrenyINRformat={getCurrenyINRformat} getPayments={getPayments}/>
                 </div>
               </div>
             </>
